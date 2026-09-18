@@ -1,0 +1,72 @@
+\documentclass[preprint,12pt]{elsarticle}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs,multirow,array,tabularx}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{enumitem}
+\usepackage{siunitx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,shapes.geometric}
+\usepackage{url}
+\usepackage{xspace}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black}
+\graphicspath{{figures/main/}{figures/appendix/}}
+\sisetup{detect-all,round-mode=places,round-precision=2}
+\setlist[itemize]{leftmargin=*,topsep=3pt,itemsep=2pt}
+\setlist[enumerate]{leftmargin=*,topsep=3pt,itemsep=2pt}
+\newcommand{\method}{H-CSMO\xspace}
+\newcommand{\repTrack}{Representative}
+\newcommand{\slaTrack}{SLA-stress}
+\newcommand{\good}[1]{\textbf{#1}}
+
+\journal{Future Generation Computer Systems}
+
+\begin{document}
+\begin{frontmatter}
+
+\title{Guarded Multi-Profile Search for Carbon-Efficient and Low-Latency Scheduling in Multi-Region Edge--Cloud Systems}
+
+
+
+\begin{abstract}
+Multi-region edge--cloud scheduling couples decisions that are often optimized separately: where a task runs, when it starts, which processor state it uses, and whether migration is worthwhile. Time-varying regional carbon intensity complicates this trade-off because an energy-efficient placement can be carbon-intensive, while consolidation or carbon shifting can extend the critical completion tail. Fixed scalarization is therefore brittle across sparse and SLA-stressed workloads. We present H-CSMO, a guarded multi-profile search framework that jointly controls placement, temporal shifting, five-state DVFS, migration, and sleep/wake behavior. H-CSMO constructs energy-, carbon-, hybrid-, and latency-oriented candidate pools, estimates workload pressure to adapt active-pool size, and allocates the objective-call budget to stochastic refinement around structured schedules. A protected critical-tail stage isolates the latest-finishing tasks and generates targeted turbo or fastest-feasible-node repairs instead of globally accelerating the schedule. The balanced output is selected only from feasible candidates satisfying guards on controllable carbon, controllable energy, gross carbon, gross energy, and makespan relative to reference and activation anchors. An external simulator evaluates every method, while two-layer accounting separates scheduler-controllable effects from the fixed infrastructure floor so that background leakage does not mask scheduling decisions. Experiments cover 24 Google- and Alibaba-derived scenarios: 12 frozen representative and 12 controlled SLA-constrained stress cells, against eight equal-budget methods including NSGA-II and PPO. H-CSMO achieves the best representative rank (1.98/8) and highest normalized carbon--energy--makespan hypervolume in all 24 scenarios. Under SLA stress, it ranks second (2.64/8), keeps the best makespan rank, and significantly outperforms ECO-PSO, TM-MOAOA, and PPO on all five metrics after Holm correction.
+\end{abstract}
+
+\begin{keyword}
+Carbon-aware scheduling \sep edge--cloud computing \sep multi-objective optimization \sep DVFS \sep Pareto search \sep task migration \sep critical-tail scheduling
+\end{keyword}
+
+\end{frontmatter}
+
+\input{sections/01_introduction}
+\input{sections/02_related_work}
+\input{sections/03_system_model}
+\input{sections/04_method}
+\input{sections/05_algorithmic_properties}
+\input{sections/06_experimental_methodology}
+\input{sections/07_results}
+\input{sections/08_discussion}
+\input{sections/09_conclusion}
+\input{sections/10_appendix}
+
+\section*{Funding}
+No funding was received for this work.
+
+\section*{Data and artifact availability}
+The experiments use trace-derived scenarios from the Google 2011 cluster workload and Alibaba Cluster Trace v2017. The frozen scenario files, run manifests, per-run decision vectors and schedules, aggregate statistical tables, and figure-generation artifacts used for the reported results are available from the corresponding author on reasonable request.
+
+\bibliographystyle{elsarticle-num}
+\bibliography{references}
+
+\end{document}

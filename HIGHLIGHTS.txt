@@ -1,0 +1,5 @@
+• Joint placement, temporal shifting, DVFS, and migration share one decision space.
+• Protected critical-tail repair improves latency within fixed carbon-energy guards.
+• H-CSMO ranks first overall on the 12 frozen representative workload scenarios.
+• H-CSMO attains the highest three-objective hypervolume in all 24 scenarios.
+• Workload-level Wilcoxon-Holm tests avoid treating search seeds as independent data.
