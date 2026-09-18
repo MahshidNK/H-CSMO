@@ -1,0 +1,95 @@
+\appendix
+
+\section{Additional Distributions and Convergence}
+\label{app:distributions}
+
+Figures~\ref{fig:box-carbon}--\ref{fig:box-makespan} report per-scenario normalized distributions for the five primary metrics. These plots complement average ranks by exposing dispersion and outliers. Figure~\ref{fig:convergence} shows median best balanced utility as the objective-call budget is consumed.
+
+\begin{figure*}[p]
+\centering
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig04_representative_scheduler_controllable_emissions_g_boxplot.pdf}\caption{Representative.}\end{subfigure}\hfill
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig04_sla_stress_scheduler_controllable_emissions_g_boxplot.pdf}\caption{SLA stress.}\end{subfigure}
+\caption{Controllable-carbon distribution relative to the best method in each scenario.}\label{fig:box-carbon}
+\end{figure*}
+
+\begin{figure*}[p]
+\centering
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig05_representative_scheduler_controllable_energy_wh_boxplot.pdf}\caption{Representative.}\end{subfigure}\hfill
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig05_sla_stress_scheduler_controllable_energy_wh_boxplot.pdf}\caption{SLA stress.}\end{subfigure}
+\caption{Controllable-energy distribution relative to the best method in each scenario.}\label{fig:box-energy}
+\end{figure*}
+
+\begin{figure*}[p]
+\centering
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig08_representative_makespan_s_boxplot.pdf}\caption{Representative.}\end{subfigure}\hfill
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig08_sla_stress_makespan_s_boxplot.pdf}\caption{SLA stress.}\end{subfigure}
+\caption{Makespan distribution relative to the best method in each scenario.}\label{fig:box-makespan}
+\end{figure*}
+
+\begin{figure*}[p]
+\centering
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig15_convergence_representative.pdf}\caption{Representative.}\end{subfigure}\hfill
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig15_convergence_sla_stress.pdf}\caption{SLA stress.}\end{subfigure}
+\caption{Median convergence of the best balanced utility as a function of the consumed evaluation budget.}\label{fig:convergence}
+\end{figure*}
+
+\section{Ablation Study}
+\label{app:ablation}
+
+The equal-budget ablations remove one control from the full method while keeping the shared evaluator and objective-call budget unchanged. Figures~\ref{fig:ablation-carbon} and \ref{fig:ablation-energy-time} report the full-method improvement relative to each ablation. Positive values favor the full scheduler. Constructor-only and historical-v3C entries are diagnostic references and are not equal-budget architectural ablations.
+
+\begin{figure*}[p]
+\centering
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig18_ablation_full_improvement_controllable_carbon_pct.pdf}\caption{Controllable carbon.}\end{subfigure}\hfill
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig20_ablation_full_improvement_gross_carbon_pct.pdf}\caption{Gross carbon.}\end{subfigure}
+\caption{Ablation results for carbon metrics.}\label{fig:ablation-carbon}
+\end{figure*}
+
+\begin{figure*}[p]
+\centering
+\begin{subfigure}{0.33\textwidth}\includegraphics[width=\linewidth]{fig19_ablation_full_improvement_controllable_energy_pct.pdf}\caption{Controllable energy.}\end{subfigure}
+\begin{subfigure}{0.33\textwidth}\includegraphics[width=\linewidth]{fig21_ablation_full_improvement_gross_energy_pct.pdf}\caption{Gross energy.}\end{subfigure}
+\begin{subfigure}{0.33\textwidth}\includegraphics[width=\linewidth]{fig22_ablation_full_improvement_makespan_pct.pdf}\caption{Makespan.}\end{subfigure}
+\caption{Ablation results for energy and makespan.}\label{fig:ablation-energy-time}
+\end{figure*}
+
+\section{Sensitivity Analysis}
+\label{app:sensitivity}
+
+Sensitivity is evaluated only for controls active in the frozen implementation. Figure~\ref{fig:sensitivity-primary} shows the most consequential families: active-pool size, critical-tail size, DVFS policy, and evaluation budget. Guard thresholds and migration/carbon-shift settings are provided in the artifact package and summarized by Fig.~\ref{fig:sensitivity-guards}. Deadline-miss ratio remains zero for all tested settings.
+
+\begin{figure*}[p]
+\centering
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig23_sensitivity_active_pool_size.pdf}\caption{Active-pool size.}\end{subfigure}\hfill
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig26_sensitivity_critical_tail_size.pdf}\caption{Critical-tail size.}\end{subfigure}
+\vspace{2mm}
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig27_sensitivity_dvfs_policy.pdf}\caption{DVFS policy.}\end{subfigure}\hfill
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig28_sensitivity_evaluation_budget.pdf}\caption{Evaluation budget.}\end{subfigure}
+\caption{Sensitivity of active search controls. Lower relative values are better within each metric.}\label{fig:sensitivity-primary}
+\end{figure*}
+
+\begin{figure*}[p]
+\centering
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig31_sensitivity_makespan_guard.pdf}\caption{Makespan guard.}\end{subfigure}\hfill
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig32_sensitivity_migration_energy_threshold.pdf}\caption{Migration-energy threshold.}\end{subfigure}
+\caption{Sensitivity of protection controls.}\label{fig:sensitivity-guards}
+\end{figure*}
+
+\section{Migration and Operating Profiles}
+\label{app:migration}
+
+Figure~\ref{fig:migration-appendix} relates migration-energy share to gross energy. Figure~\ref{fig:profiles-appendix} shows the median carbon--energy locations of the four operating profiles; marker size reflects the makespan component. These plots make explicit that migration and profile choice are active trade-off controls rather than unreported side effects.
+
+\begin{figure*}[p]
+\centering
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig16_migration_cost_benefit_representative.pdf}\caption{Representative.}\end{subfigure}\hfill
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig16_migration_cost_benefit_sla_stress.pdf}\caption{SLA stress.}\end{subfigure}
+\caption{Migration cost-benefit distributions.}\label{fig:migration-appendix}
+\end{figure*}
+
+\begin{figure*}[p]
+\centering
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig17_profile_tradeoff_representative.pdf}\caption{Representative.}\end{subfigure}\hfill
+\begin{subfigure}{0.49\textwidth}\includegraphics[width=\linewidth]{fig17_profile_tradeoff_sla_stress.pdf}\caption{SLA stress.}\end{subfigure}
+\caption{Median operating-profile trade-offs produced by \method.}\label{fig:profiles-appendix}
+\end{figure*}

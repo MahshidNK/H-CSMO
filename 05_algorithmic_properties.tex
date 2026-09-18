@@ -1,0 +1,26 @@
+\section{Algorithmic Properties and Computational Cost}
+\label{sec:properties}
+
+The deployed scheduler combines deterministic construction, stochastic search, and an external feasibility-aware simulator. This structure supports several implementation guarantees, but it does not imply global convergence for the mixed discrete/continuous scheduling problem. We therefore state only properties that follow directly from the frozen implementation.
+
+\subsection{Feasibility and deadline handling}
+
+Resource feasibility is enforced during reservation construction. For every decoded task, the evaluator searches for the earliest start time at which the requested CPU and memory fit the existing reservations on the selected node. If the resulting completion exceeds the deadline, the common repair first removes temporal shifting and raises the selected node to the performance state; if necessary, all feasible nodes are checked under the same repair and the earliest completion is selected. Final profile selection excludes any record with a positive deadline-miss ratio or non-zero total tardiness. Thus, the schedules reported for \method are feasible by construction under the same repair logic available to every comparator. This is an evaluator property, not a claim that arbitrary instances are always feasible.
+
+\subsection{Exact objective-call accounting}
+
+Let $B$ be the budget assigned to a method in a scenario. \method reserves 20 objective calls for two legacy anchors, two schedule-producing tail analyses, and 16 critical-tail candidates, while its earlier search receives $B-20$ calls. No post-search replay call is counted as a search objective call. The final suite verifies the counter directly for every equal-budget run. As a result, comparisons with ECO-PSO, TM-MOAOA, the adapted metaheuristics, NSGA-II, and PPO use the same number of calls to the external objective evaluator for a given scenario.
+
+\subsection{Search cost}
+
+Let $C_{\mathrm{eval}}(N,M)$ denote the cost of evaluating one $3N$-dimensional decision vector on $M$ heterogeneous nodes. The dominant work is reservation placement, migration calculation, and piecewise power/carbon integration. \method performs exactly $B$ such evaluations, so its dominant cost is
+\begin{equation}
+\mathcal{O}\left(B\,C_{\mathrm{eval}}(N,M)\right).
+\end{equation}
+Candidate construction adds node ranking and local option enumeration. With a bounded active-pool size $K\le 8$, the constructor overhead is approximately $\mathcal{O}(NK|\mathcal{F}|)$ after node rankings are available. The critical-tail stage evaluates a constant number of candidates because the tail-size set is fixed to $\{1,2,4,8\}$. Archive storage grows linearly with the number of unique evaluated vectors; storing all decision vectors therefore requires $\mathcal{O}(BN)$ values in the reference implementation.
+
+The wall-clock results in Section~\ref{sec:runtime-results} are more informative than asymptotic notation for practical use, because the compared methods differ in Python-level search bookkeeping and PPO additionally incurs neural-network inference and updates. We therefore report both objective-call equality and measured decision time.
+
+\subsection{Protected-selection property}
+
+The final repair stage cannot replace the pre-repair balanced anchor with a candidate that violates the fixed guard set in Eq.~\eqref{eq:protected-guards}. When the admissible set is empty, the base anchor is returned. When it is non-empty, the selected candidate is the fastest member of that set. This yields a simple conditional property: \emph{tail repair can change the deployed balanced schedule only inside the declared carbon, energy, gross-accounting, and makespan protection envelope}. The property is intentionally local to the evaluated candidate set and should not be interpreted as a global optimality theorem.

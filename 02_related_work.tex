@@ -1,0 +1,51 @@
+\section{Related Work}
+\label{sec:related}
+
+The scheduling problem considered here lies at the intersection of carbon-aware orchestration, multi-objective edge--cloud scheduling, adaptive metaheuristics, and learning-based control. These areas have developed quickly, but they expose different assumptions about workload slack, adaptation cost, and the way competing objectives are represented.
+
+\subsection{Carbon-aware scheduling across the cloud--edge continuum}
+
+Carbon-aware execution first gained traction in geographically distributed systems because the same unit of energy can carry different emissions at different places and times. West et al. quantified the practical potential of carbon-aware execution for scientific workflows and showed that the available flexibility, rather than carbon variation alone, determines the achievable benefit \cite{West2026CarbonAwareWorkflows}. GreenScale by Son et al. extended carbon optimization toward edge computing by considering the interaction between execution location and system carbon cost \cite{son2025greenscale}. Zhai et al. used forecast-driven two-stage scheduling to align geo-distributed workloads with wind availability, emphasizing that temporal prediction can be as important as spatial placement \cite{zhai2025forecast}.
+
+Recent 2026 work has made the carbon model more tightly coupled to continuum orchestration. Calavaro et al. considered carbon-aware offloading with function variants in serverless cloud-to-edge systems, where application variants change the execution trade-off itself \cite{calavaro2026functionvariants}. Al-Shammaa and Al-Hadrawi formulated federated edge--cloud orchestration with dynamic spatio-temporal workload management \cite{alshammaa2026federated}, while Fu et al. studied carbon-aware resource allocation and offloading when edge resources interact with energy harvesting \cite{fu2026ehcarbon}. These studies establish that carbon-aware scheduling is no longer a simple region-selection problem. The remaining difficulty addressed in this paper is narrower but operationally important: carbon decisions are made jointly with sleep/wake transitions, DVFS, migration energy, and a hard latency tail, and the reported carbon benefit is separated from the non-controllable infrastructure floor.
+
+\subsection{Multi-objective and Pareto scheduling}
+
+Multi-objective scheduling avoids reducing heterogeneous operational goals to a single metric. Abraham et al. survey cloud task schedulers that use Pareto or weighted multi-objective formulations and identify makespan, energy, utilization, and cost as recurring objectives \cite{abraham2025multi}. In edge--cloud settings, Etheredge et al. proposed PULSE, a distributed scheduler for service-based applications across multi-cluster cloud--edge--IoT infrastructures \cite{Etheredge2026Pulse}. Younesi et al. considered multi-objective energy optimization in IoT-integrated cyber-physical systems \cite{younesi2025moticps}. These methods motivate preserving trade-off structure rather than presenting a single score as universally optimal.
+
+Several metaheuristic schedulers have also targeted the same metric family. Pournazari et al. proposed energy-centric multi-objective offloading in fog computing \cite{pournazari2025multi}; Khaledian et al. combined TOPSIS with multi-objective Archimedes optimization in TM-MOAOA \cite{khaledian2025tm}; and Tandon et al. used a hybrid metaheuristic to reduce makespan and imbalance in cloud scheduling \cite{tandon2025novel}. The distinction in \method is that the Pareto archive is accompanied by named operating profiles and a guarded final selector. The search can therefore retain diverse candidates while the deployed balanced schedule is prevented from purchasing a latency improvement with an unbounded energy or carbon regression.
+
+\subsection{Adaptive metaheuristic scheduling}
+
+Population-based optimizers remain attractive when the scheduling objective is non-smooth, mixed discrete/continuous, and expensive to differentiate. Satouf et al. studied metaheuristic scheduling for latency-sensitive IoT applications at the edge \cite{satouf2025metaheuristic}; Pinky and Verma combined metaheuristics for delay and energy optimization in cloud--fog systems \cite{pinky2025enhanced}; and Pillai et al. used hybrid metaheuristics for fog-layer resource management \cite{sanjaikanth2025optimizing}. Spider-monkey-based scheduling has also been applied to cloud load balancing and multi-objective task allocation \cite{verma2024load,amer2024efficient,khaleel2025application}.
+
+The common strength of these methods is flexible exploration, but their behavior depends strongly on the candidate representation and on how the search is seeded. A generic mutation operator can spend much of its budget rediscovering obviously poor schedules when the feasible space includes placement, timing, and DVFS simultaneously. \method therefore gives structure to the search before stochastic refinement: node pools are ranked by energy, carbon, speed, and hybrid scores; profile-specific constructors build feasible schedules; and stochastic perturbations are concentrated around these structured candidates. This makes the evaluation budget itself part of the algorithmic design rather than an incidental stopping condition.
+
+\subsection{Learning-based adaptive scheduling}
+
+Deep reinforcement learning provides another route to adaptation by learning a policy over a state/action representation. Shen et al. applied reinforcement learning to task scheduling in heterogeneous end--edge--cloud systems \cite{shen2025reinforcement}; Anand and Karthikeyan proposed EADRL with adaptive exploration for dynamic edge--cloud scheduling \cite{anand2025eadrl}; and Ismail et al. reviewed DQN-, DDQN-, actor--critic-, and related approaches for multi-access edge computing \cite{ismail2025survey}. More recent work focuses directly on multi-objective reward design. RELTO uses PPO with context-aware adaptive reward weighting for reliability-oriented MEC offloading \cite{nasir2026relto}, and Sravan and Shaik formulate a DRL scheduler for latency, energy, and SLA optimization in edge--cloud systems \cite{sravan2026drl}. Federated reinforcement learning has also been used to coordinate adaptive stream scheduling across edge and cloud resources \cite{lajili2026federated}.
+
+Learning-based schedulers can encode long-range state dependencies that hand-designed search operators do not capture. Their practical cost, however, depends on training, reward calibration, and the stability of the deployment distribution. For this reason, the experiments in this paper include an imitation-warm-started PPO scheduler in the same external decision space and with the same simulator-call budget as the classical optimizers. The comparison is therefore about the quality and cost of decision generation under a shared evaluator, rather than about an artificially advantaged simulator interface.
+
+\subsection{Positioning of \method}
+
+Table~\ref{tab:related-positioning} summarizes the closest methodological directions. The contribution of \method is not a new carbon signal or a new isolated optimizer operator. It is the combination of (i) joint placement--time--DVFS decisions, (ii) workload-dependent active-pool construction, (iii) explicit multi-profile search, (iv) critical-tail repair, and (v) protected selection under two-layer energy/carbon accounting. That combination is designed for the case in which the best carbon schedule, the best energy schedule, and the fastest schedule can be different points in the same scenario.
+
+\begin{table*}[t]
+\centering
+\caption{Positioning of representative scheduling directions relative to the control dimensions used in this study.}
+\label{tab:related-positioning}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{p{2.65cm}C{1.0cm}C{1.0cm}C{1.35cm}C{1.35cm}C{1.15cm}Y}
+\toprule
+Direction & Carbon & Energy & Latency/ SLA & Temporal shift & DVFS & Main distinction relative to \method \\
+\midrule
+Forecast-driven carbon scheduling \cite{zhai2025forecast,calavaro2026functionvariants} & \checkmark & \checkmark & limited & \checkmark & -- & Strong spatio-temporal carbon control; does not use the guarded multi-profile critical-tail mechanism studied here. \\
+Distributed multi-objective scheduling \cite{Etheredge2026Pulse} & context & \checkmark & \checkmark & context & -- & Distributed Pareto/service placement with a different decision representation and power-state model. \\
+Adaptive DRL \cite{nasir2026relto,sravan2026drl} & possible & \checkmark & \checkmark & policy dep. & policy dep. & Learns a policy/reward mapping and pays training/inference cost rather than using a bounded profile search. \\
+Metaheuristic hybrids \cite{pournazari2025multi,khaledian2025tm,amer2024efficient} & method dep. & \checkmark & \checkmark & limited & method dep. & Flexible search, typically without the same active-pool, two-layer accounting, and protected tail selector. \\
+\method & \checkmark & \checkmark & \checkmark & \checkmark & five states & Joint control with equal-budget profile search, two-layer accounting, and protected final selection. \\
+\bottomrule
+\end{tabularx}
+\end{table*}

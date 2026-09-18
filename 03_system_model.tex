@@ -1,0 +1,136 @@
+\section{System Model and Problem Formulation}
+\label{sec:model}
+
+\subsection{Infrastructure, workload, and notation}
+
+We consider a set of compute nodes $\mathcal{N}=\{1,\ldots,M\}$ distributed across six geographical regions. Each node $j\in\mathcal{N}$ has a type $\tau_j\in\{\text{edge},\text{regional},\text{cloud}\}$, region $r_j$, CPU and memory capacities $C^{\mathrm{cpu}}_j$ and $C^{\mathrm{mem}}_j$, and an explicit power-state model. The workload is a set $\mathcal{T}=\{1,\ldots,N\}$ of independent tasks. Task $i$ is described by
+\begin{equation}
+\mathcal{Q}_i=\left(a_i,d_i,w_i,c_i,m_i,v_i,r_i^0,q_i\right),
+\end{equation}
+where $a_i$ is the arrival time, $d_i$ is the deadline, $w_i$ is observed CPU work, $c_i$ and $m_i$ are requested CPU and memory, $v_i$ is migration state size, $r_i^0$ is the initial region, and $q_i$ is the service class (urgent, standard, or flexible). The Google- and Alibaba-derived scenarios preserve source identifiers so that every scheduled row can be replayed against the original task record.
+
+Each task receives one triplet of control variables,
+\begin{equation}
+\mathbf{y}_i=\left(j_i,\delta_i,f_i\right),
+\label{eq:decision-triplet}
+\end{equation}
+where $j_i$ is a feasible node, $\delta_i\in[0,1]$ is a temporal-shift fraction, and $f_i\in\mathcal{F}$ is one of five DVFS states. The complete search vector has dimension $3N$. Internally, node and DVFS choices are represented by normalized keys in $[0,1)$ so that every compared optimizer acts on the same continuous vector and the same decoder maps that vector to discrete controls.
+
+\subsection{Execution time, temporal shifting, and resource feasibility}
+
+Let $\xi_{\tau_j}$ denote the baseline speed factor of node type $\tau_j$ and $\sigma_{f_i}$ the speed multiplier of DVFS state $f_i$. The execution time of task $i$ on node $j_i$ is
+\begin{equation}
+T^{\mathrm{exec}}_i=\frac{w_i}{c_i\,\xi_{\tau_{j_i}}\,\sigma_{f_i}},
+\label{eq:runtime}
+\end{equation}
+with $\xi_{\mathrm{edge}}=0.8$, $\xi_{\mathrm{regional}}=1.0$, and $\xi_{\mathrm{cloud}}=1.25$ in the frozen simulator.
+
+When $r_i^0\neq r_{j_i}$, task state is transferred before execution. Let $B_{uv}$ denote link bandwidth in Gbit/s and $L_{uv}$ the round-trip latency in seconds from region $u$ to $v$. For migration state $v_i$ expressed in GiB, the simulator transfer time is
+\begin{equation}
+T^{\mathrm{net}}_i=\frac{8v_i}{B_{r_i^0,r_{j_i}}}+L_{r_i^0,r_{j_i}},
+\label{eq:transfer-time}
+\end{equation}
+with zero transfer cost for same-region execution. The earliest possible start is
+\begin{equation}
+e_i=a_i+T^{\mathrm{net}}_i,
+\end{equation}
+and the latest target start that leaves one nominal runtime before the deadline is
+\begin{equation}
+\ell_i=\max\{e_i,d_i-T^{\mathrm{exec}}_i\}.
+\end{equation}
+The temporal key selects
+\begin{equation}
+\hat{s}_i=e_i+\delta_i(\ell_i-e_i).
+\label{eq:temporal-target}
+\end{equation}
+The actual start $t_i^{\mathrm{s}}$ is the earliest time no earlier than $\hat{s}_i$ for which concurrent reservations satisfy
+\begin{align}
+\sum_{k:\,t\in[t_k^{\mathrm{s}},t_k^{\mathrm{f}})} c_k &\le C^{\mathrm{cpu}}_{j_i}, \\
+\sum_{k:\,t\in[t_k^{\mathrm{s}},t_k^{\mathrm{f}})} m_k &\le C^{\mathrm{mem}}_{j_i},
+\label{eq:resource-capacity}
+\end{align}
+where $t_i^{\mathrm{f}}=t_i^{\mathrm{s}}+T^{\mathrm{exec}}_i$. If the decoded candidate misses $d_i$, the common evaluator first retries the same node at the performance DVFS state with no temporal shift; if the deadline is still missed, it evaluates all task-feasible nodes under the same repair setting and chooses the earliest feasible completion. This repair is external to every optimizer and therefore does not provide a method-specific advantage.
+
+The workload makespan and deadline statistics are
+\begin{align}
+T_{\max} &= \max_{i\in\mathcal{T}} t_i^{\mathrm{f}}-\min_{i\in\mathcal{T}} a_i, \\
+\mathrm{DMR} &= \frac{1}{N}\sum_{i=1}^{N}\mathbb{I}[t_i^{\mathrm{f}}>d_i], \\
+\mathrm{Tard} &= \sum_{i=1}^{N}\max(0,t_i^{\mathrm{f}}-d_i).
+\label{eq:latency-metrics}
+\end{align}
+
+\subsection{DVFS, sleep/wake, and facility power}
+
+The five DVFS states are $\mathcal{F}=\{$eco-low, eco, balanced, performance, turbo$\}$. State $f$ scales nominal idle and dynamic powers by $\alpha_f^{\mathrm{idle}}$ and $\alpha_f^{\mathrm{dyn}}$. Let $\mathcal{A}_j(t)$ be the tasks executing on node $j$ at time $t$. When $\mathcal{A}_j(t)\neq\varnothing$, the simulator uses
+\begin{equation}
+P_j^{\mathrm{act}}(t)=\mathrm{PUE}_{r_j}\!\left[
+P_j^{\mathrm{idle}}\max_{i\in\mathcal{A}_j(t)}\alpha_{f_i}^{\mathrm{idle}}
++P_j^{\mathrm{dyn}}\sum_{i\in\mathcal{A}_j(t)}
+\frac{c_i}{C_j^{\mathrm{cpu}}}\alpha_{f_i}^{\mathrm{dyn}}
+\right].
+\label{eq:active-power}
+\end{equation}
+This interval formulation matches the evaluator when tasks with different DVFS states overlap on the same node. Outside active intervals, the node is charged at standby, sleep, or deep-off leakage according to the surrounding reservations and the minimum sleep-time rule. Wake energy is charged whenever a node is first activated or reactivated after a sleep-eligible gap. Predictive wake is available to every scheduler because arrivals are declared by the scenario; therefore wake latency is planned before a reserved start rather than injected as a method-specific deadline penalty.
+
+The migration network consumes $e_{uv}$ Wh per GiB on an inter-region link. Migration energy and its associated emissions are
+\begin{align}
+E_i^{\mathrm{mig}} &= v_i e_{r_i^0,r_{j_i}}, \\
+C_i^{\mathrm{mig}} &= \frac{E_i^{\mathrm{mig}}}{1000}\,\bar{\gamma}_{r_i^0,r_{j_i}}(a_i),
+\label{eq:migration-energy}
+\end{align}
+where $\bar{\gamma}_{uv}$ is the mean source/destination carbon intensity at the task-arrival time used by the frozen evaluator. Carbon intensity $\gamma_r(t)$ is piecewise constant over 30-minute forecast slots in the experiments.
+
+\subsection{Two-layer energy and carbon accounting}
+\label{sec:two-layer}
+
+A fixed background floor can mask the effect of a scheduler when workloads differ in duration or density. We therefore report both the gross facility result and the portion above an explicitly declared deep-off floor. The deep-off power of node $j$ is
+\begin{equation}
+P^{\mathrm{floor}}_j=\rho_{\mathrm{off}}P_j^{\mathrm{idle}}\mathrm{PUE}_{r_j}, \qquad \rho_{\mathrm{off}}=0.01.
+\label{eq:floor-power}
+\end{equation}
+Let $t_0$ be the scenario origin and $t_f=\max_i t_i^{\mathrm{f}}$ the schedule completion time. The finish-bounded gross energy is
+\begin{equation}
+E^{\mathrm{finish}}_{\mathrm{gross}}
+=\sum_{j\in\mathcal{N}}\int_{t_0}^{t_f}P_j(t)\,dt
++\sum_i E_i^{\mathrm{mig}},
+\label{eq:finish-energy}
+\end{equation}
+and the finish-bounded floor is
+\begin{equation}
+E^{\mathrm{finish}}_{\mathrm{floor}}
+=\sum_{j\in\mathcal{N}}P^{\mathrm{floor}}_j(t_f-t_0).
+\end{equation}
+The scheduler-controllable increment is then
+\begin{equation}
+E_{\mathrm{ctrl}}=\max\left(0,E^{\mathrm{finish}}_{\mathrm{gross}}-E^{\mathrm{finish}}_{\mathrm{floor}}\right).
+\label{eq:controllable-energy}
+\end{equation}
+For gross comparison, the evaluator extends each schedule to the common horizon
+\begin{equation}
+H=\max\{t_f,\max_i d_i,\max_i a_i\},
+\label{eq:fixed-horizon}
+\end{equation}
+which is identical across feasible schedules for the same scenario. The fixed-horizon gross energy is
+\begin{equation}
+E_{\mathrm{gross}}=E^{\mathrm{finish}}_{\mathrm{gross}}+
+\sum_j P^{\mathrm{floor}}_j\max(0,H-t_f).
+\label{eq:gross-energy}
+\end{equation}
+
+Emissions are integrated over the same power intervals using the region-specific carbon process. Denoting this integration operator by $\Gamma[\cdot]$, we report
+\begin{align}
+C_{\mathrm{ctrl}} &= \max\left(0,C^{\mathrm{finish}}_{\mathrm{gross}}-C^{\mathrm{finish}}_{\mathrm{floor}}\right), \\
+C_{\mathrm{gross}} &= C^{\mathrm{finish}}_{\mathrm{gross}}+C^{\mathrm{post}}_{\mathrm{floor}}.
+\label{eq:carbon-layers}
+\end{align}
+The gross quantities are never relabeled as controllable savings; both layers appear in the results.
+
+\subsection{Optimization target}
+
+The scheduling problem is not reduced to one universal scalar. Its primary objective vector is
+\begin{equation}
+\mathbf{g}(\mathbf{y})=
+\left(C_{\mathrm{ctrl}},E_{\mathrm{ctrl}},C_{\mathrm{gross}},E_{\mathrm{gross}},T_{\max},V_{\mathrm{mig}}\right),
+\label{eq:objective-vector}
+\end{equation}
+subject to the resource constraints in Eq.~\eqref{eq:resource-capacity} and deadline feasibility in Eq.~\eqref{eq:latency-metrics}. $V_{\mathrm{mig}}=\sum_i v_i\mathbb{I}[r_i^0\neq r_{j_i}]$ is reported together with migration energy and emissions. The algorithm maintains several profile-specific scalar utilities only to guide search and final operating-point selection; Pareto dominance is computed directly from the physical metrics in Eq.~\eqref{eq:objective-vector}.

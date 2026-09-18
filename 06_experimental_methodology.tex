@@ -1,0 +1,114 @@
+\section{Experimental Methodology}
+\label{sec:experimental}
+
+\subsection{Trace-derived workloads and evaluation tracks}
+
+The workload scenarios are derived from two public production traces: the Google cluster workload released in 2011 and Alibaba Cluster Trace v2017 \cite{reiss2012google,cheng2018alibaba,shahmirzadi2024analyzing}. We use two scenario families for each dataset. \emph{Trace-dynamic} scenarios retain the trace-derived resource and timing structure, whereas \emph{flexible-dynamic} scenarios expose additional scheduling slack while preserving the task resource characteristics. Source task identifiers remain unique in every scenario and are carried into the saved schedule, allowing row-level replay.
+
+The evaluation uses two separate tracks because sparse representative workloads and SLA stress answer different questions. The representative track contains 12 frozen scenarios: two datasets $\times$ two families $\times$ task counts of 30, 60, and 90, all on 30 nodes. Scenario seeds 811, 823, and 827 are tied to the three task counts. These files are byte-for-byte frozen inputs to the final benchmark.
+
+The SLA-constrained track contains 12 controlled stress cells on 50 nodes and 150 tasks. Four base scenarios (two datasets $\times$ two families) are evaluated with workload seeds 6000, 6101, and 6102. Seed 6000 is the original SLA-constrained scenario. Seeds 6101 and 6102 apply service-class-stratified permutations to task arrival times; CPU work, CPU/memory requests, migration state, service class, source ID, and SLA slack are unchanged, and each deadline is reconstructed as the new arrival plus the unchanged slack. We therefore treat these cells as \emph{controlled SLA-constrained workload-seed replications}, not as independent untouched trace replays.
+
+\begin{table*}[t]
+\centering
+\caption{Final experimental design. Search seeds are nested algorithmic repetitions; paired inference is performed after aggregating within scenario/workload cells.}
+\label{tab:design}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{p{2.15cm}Y p{1.45cm}C{0.85cm}C{0.85cm}p{2.55cm}C{1.25cm}}
+\toprule
+Track & Datasets & Families & Nodes & Tasks & Workload/scenario seeds & Calls \\
+\midrule
+Representative & Google2011v2; Alibaba2017 & trace; flexible & 30 & 30 & 811 & 156 \\
+ &  &  & 30 & 60 & 823 & 216 \\
+ &  &  & 30 & 90 & 827 & 276 \\
+SLA stress & Google2011v2; Alibaba2017 & trace; flexible & 50 & 150 & 6000, 6101, 6102 & 396 \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\subsection{Carbon, network, and power environment}
+
+The environment contains six regions. Carbon intensity comes from a half-hourly six-region NESO forecast trace spanning 1--8 January 2024; the 336 slots per region are replayed cyclically over one week by the simulator. Inter-region placement is charged through the frozen network matrix using round-trip latency, bandwidth, and transfer energy. Same-region execution incurs no migration transfer. Inter-region RTTs range from 8 to 38~ms, bandwidth from 5 to 25~Gbit/s, and transfer energy is 0.06~Wh/GiB. The matrix also stores jitter bounds for provenance, but the deterministic evaluator uses the declared base RTT and bandwidth values so that identical decision vectors replay exactly.
+
+Table~\ref{tab:power-model} summarizes the base node classes. Regional PUE ranges from 1.12 to 1.22 across the six regions. The simulator accounts for active dynamic power, standby/sleep states, minimum up/sleep durations, predictive wake latency, and wake energy. The same control model is exposed to every method.
+
+\begin{table*}[t]
+\centering
+\caption{Representative node-class power parameters used by the shared simulator. CPU/memory capacities are normalized trace-scale capacities.}
+\label{tab:power-model}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccccccc}
+\toprule
+Type & CPU & Mem. & Idle & Dyn. & Stby. & Sleep & Wake & Wake E. \\
+ & & & (W) & (W) & (W) & (W) & (s) & (Wh) \\
+\midrule
+Edge & 0.25 & 0.25 & 40 & 60 & 8 & 3.2 & 5 & 0.174 \\
+Regional & 0.50 & 0.50 & 90 & 130 & 18 & 7.2 & 15 & 1.146 \\
+Cloud & 1.00 & 1.00 & 180 & 240 & 36 & 14.4 & 30 & 4.375 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+The five-state DVFS multipliers are shown in Table~\ref{tab:dvfs}. They are applied uniformly across methods. The performance state is the nominal baseline; turbo raises speed by 10\% with higher idle/dynamic power, while eco and eco-low trade runtime for lower power.
+
+\begin{table}[t]
+\centering
+\caption{Five-state DVFS control shared by all schedulers.}
+\label{tab:dvfs}
+\small
+\begin{tabular}{lccc}
+\toprule
+State & Speed $\sigma_f$ & Idle mult. & Dynamic mult. \\
+\midrule
+Eco-low & 0.70 & 0.82 & 0.46 \\
+Eco & 0.80 & 0.86 & 0.55 \\
+Balanced & 0.90 & 0.92 & 0.70 \\
+Performance & 1.00 & 1.00 & 1.00 \\
+Turbo & 1.10 & 1.05 & 1.30 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Compared methods and fairness controls}
+
+The main benchmark contains eight equal-budget methods. ECC-CEE, MEO, and Jellyfish-RTS are adapted implementations: their characteristic search logic is retained, but candidate schedules are represented and evaluated in the shared joint placement--time--DVFS space rather than by private method-specific simulators. This distinction is explicit because the comparison targets scheduling behavior under a common physical evaluator, not line-by-line reproduction of third-party source code.
+
+\begin{table*}[t]
+\centering
+\caption{Methods in the main equal-budget benchmark.}
+\label{tab:baselines}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{p{2.7cm}p{2.8cm}Y}
+\toprule
+Method & Family & Role in the comparison \\
+\midrule
+\method & Guarded multi-profile search & Proposed joint placement/time/DVFS scheduler with adaptive pools and critical-tail protection. \\
+ECC-CEE-adapted \cite{zhai2024edge} & Carbon-aware edge--cloud & Adapted carbon/latency-oriented search under the common evaluator. \\
+ECO-PSO-Joint \cite{pournazari2025multi} & PSO/metaheuristic & Joint-control PSO-style search with equal objective-call budget. \\
+TM-MOAOA-Joint \cite{khaledian2025tm} & MCDM + metaheuristic & Joint-control adaptation of TOPSIS/MOAOA scheduling. \\
+MEO-adapted \cite{pournazari2025carbon} & Multi-objective metaheuristic & Adapted carbon-aware multi-objective search. \\
+Jellyfish-RTS-adapted \cite{nigade2024inference} & Latency-oriented metaheuristic & Adapted latency-sensitive evolutionary search. \\
+NSGA-II \cite{deb2002nsga2} & Pareto evolutionary & Four-objective non-dominated sorting with crowding under the common decision vector. \\
+PPO-Joint \cite{schulman2017ppo} & Deep RL & PPO policy over joint actions, imitation-warm-started without simulator calls, then trained/evaluated inside the same call budget. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+Three search seeds (42, 211, and 307) are used for every stochastic main method. These seeds are algorithmic repetitions, not independent workload samples. For paired statistical inference, metrics are first summarized within each scenario/workload cell; the 12 cells in each track are then the paired units. Every main method receives the same scenario file, node/power model, network and carbon traces, decoder, deadline repair, objective definitions, and objective-call budget shown in Table~\ref{tab:design}.
+
+For diagnostic context, we additionally retain Dynamic Greedy, the historical H-CSMO-v3C implementation, and a constructor-only scheduler. Appendix controls include \emph{true uniform feasible random} and \emph{baseline-perturbed random (35\% mutation)}. The latter is deliberately not described as true random assignment because it mutates a baseline schedule rather than sampling uniformly from the feasible space.
+
+\subsection{Metrics and statistical analysis}
+
+The primary metrics are scheduler-controllable emissions $C_{\mathrm{ctrl}}$, scheduler-controllable energy $E_{\mathrm{ctrl}}$, gross fixed-horizon emissions $C_{\mathrm{gross}}$, gross fixed-horizon energy $E_{\mathrm{gross}}$, and makespan $T_{\max}$. We also report deadline-miss ratio, total tardiness, migration volume/energy/emissions, active-node count, wall-clock decision time, Pareto coverage, additive epsilon indicator, and normalized three-objective hypervolume. Hypervolume uses controllable carbon, controllable energy, and makespan after common normalization within each scenario.
+
+The omnibus comparison uses the Friedman test across the eight methods. Pairwise comparisons between \method and each competitor use a two-sided Wilcoxon signed-rank test on paired scenario values, followed by Holm correction within each metric/track family. Effect size is the matched-pairs rank-biserial correlation computed from positive and negative signed ranks. A 5000-resample scenario bootstrap provides a confidence interval for the median paired difference. These analyses use scenario/workload cells as the statistical unit rather than treating the three search seeds as independent evidence.
+
+\subsection{Ablation, sensitivity, and reproducibility}
+
+The ablation study includes the full scheduler and equal-budget variants with critical-tail repair removed, adaptive active-pool logic removed, five-state DVFS removed, carbon shifting disabled, migration disabled, race-to-idle disabled, and the legacy protection guard removed. Constructor-only and historical-v3C results are reported as diagnostic references rather than equal-budget ablations. Sensitivity experiments cover evaluation budget, active-pool size, critical-tail size, makespan/energy protection guards, migration-energy threshold, carbon-shift cap, and DVFS policy. Parameters that are not active in the frozen implementation are not presented as tunable factors.
+
+The complete experiment contains 576 main equal-budget runs and 1128 total run/reference/control items. Every completed run is atomically committed with a summary, decision vectors, schedules, evaluation log, per-file SHA-256 manifest, and completion sentinel. The final artifact audit verified all 1128 items. Independent replay of all 576 balanced main profiles reproduced the saved metrics exactly and the numeric schedules to a maximum absolute difference of $5.82\times10^{-11}$. The software environment used Python 3.12.13 on 64-bit Linux with NumPy 2.0.2, pandas 2.2.2, SciPy 1.16.3, Matplotlib 3.10.0, and CPU-only PyTorch 2.11.0.
