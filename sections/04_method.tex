@@ -1,0 +1,171 @@
+\section{H-CSMO: Guarded Multi-Profile Search}
+\label{sec:method}
+
+\subsection{Design overview}
+
+\method operates on the shared $3N$-dimensional representation in Eq.~\eqref{eq:decision-triplet}. Its search is organized around four operating profiles rather than one fixed scalarization: balanced, carbon, energy, and latency-guarded profiles. Each profile changes three things together: the node-ranking criterion used to construct active pools, the admissible DVFS/time-shift options, and the utility used to rank candidate schedules. The balanced profile is the reported default operating point; the other profiles populate the archive and expose alternative carbon, energy, and latency trade-offs.
+
+Figure~\ref{fig:workflow} shows the control flow. The shared simulator first evaluates a dynamic-greedy anchor. Structured constructors then generate profile-specific candidates from ranked node pools. A workload-pressure estimator changes the number of active nodes used by the representative-regime constructors. The remaining objective-call budget is spent on grouped stochastic perturbations around structured leaders and on diversification around the common anchor. The final phase creates targeted repairs for the tasks that finish last, filters all feasible candidates through fixed protection rules, and returns the fastest protected balanced candidate. The non-dominated records remain available for Pareto analysis.
+
+\begin{figure*}[t]
+\centering
+\resizebox{0.98\textwidth}{!}{%
+\begin{tikzpicture}[
+node distance=7mm and 10mm,
+box/.style={draw,rounded corners,align=center,minimum height=9mm,text width=3.2cm,fill=blue!4},
+small/.style={draw,rounded corners,align=center,minimum height=8mm,text width=2.7cm,fill=green!4},
+arrow/.style={-{Latex[length=2mm]},thick},
+]
+\node[box] (inputs) {Task trace, node states, carbon trace, network matrix};
+\node[box,right=of inputs] (ref) {Shared dynamic-greedy reference and physical evaluator};
+\node[box,right=of ref] (pool) {Energy/carbon/\\hybrid/speed\\node rankings};
+\node[small,below=of pool] (profiles) {Four profile constructors};
+\node[small,left=of profiles] (adaptive) {Adaptive active-pool sizing};
+\node[small,right=of profiles] (search) {Equal-budget stochastic refinement};
+\node[box,below=13mm of profiles] (archive) {Feasible archive and profile-specific selection};
+\node[small,left=of archive] (legacy) {Legacy activation anchors};
+\node[small,right=of archive] (tail) {Critical-tail turbo / fastest-node repairs};
+\node[box,below=of archive] (guard) {Protected balanced filter: carbon, energy, gross, and makespan guards};
+\node[box,below=of guard] (output) {Balanced schedule + Pareto profiles + replayable decision vector};
+\draw[arrow] (inputs) -- (ref);
+\draw[arrow] (ref) -- (pool);
+\draw[arrow] (pool) -- (profiles);
+\draw[arrow] (adaptive) -- (profiles);
+\draw[arrow] (profiles) -- (search);
+\draw[arrow] (profiles) -- (archive);
+\draw[arrow] (search) -- (archive);
+\draw[arrow] (legacy) -- (archive);
+\draw[arrow] (tail) -- (archive);
+\draw[arrow] (archive) -- (guard);
+\draw[arrow] (guard) -- (output);
+\end{tikzpicture}%
+}
+\caption{Execution flow of the frozen \method scheduler used in the reported experiments. All candidate schedules are evaluated by the same external simulator used for the baselines.}
+\label{fig:workflow}
+\end{figure*}
+
+\subsection{Profile-aware construction}
+
+For each task, a constructor considers a ranked subset of feasible nodes and a profile-specific set of DVFS/time-shift actions. Candidate nodes are ranked by static estimates of energy, carbon, speed, or a hybrid score. Within a selected pool, the constructor enumerates feasible actions and computes four local attributes: incremental energy, incremental carbon, normalized finish time, and whether a new node must be activated. Each attribute is min--max normalized over the current task's options.
+
+Let $\kappa_i$ denote deadline criticality,
+\begin{equation}
+\kappa_i=\min\left(1,\frac{T^{\mathrm{fast}}_i}{\max(d_i-a_i,T^{\mathrm{fast}}_i,\epsilon)}\right),
+\label{eq:criticality}
+\end{equation}
+where $T^{\mathrm{fast}}_i$ is the fastest runtime among the enumerated options. Each profile starts from a base weight vector $\mathbf{b}^{(p)}=(b_E,b_C,b_T,b_A)$. The finish-time weight increases with criticality,
+\begin{equation}
+\omega_T^{(p,i)}=\min\left(0.88,b_T^{(p)}+0.40\kappa_i\right),
+\end{equation}
+and the remaining weight is redistributed proportionally over energy, carbon, and activation:
+\begin{equation}
+(\omega_E,\omega_C,\omega_A)=
+\frac{1-\omega_T}{b_E+b_C+b_A}(b_E,b_C,b_A).
+\label{eq:profile-weights}
+\end{equation}
+The local option score is
+\begin{equation}
+S_{i,o}^{(p)}=\omega_E \hat{E}_{i,o}+\omega_C \hat{C}_{i,o}+\omega_T \hat{T}_{i,o}+\omega_A \hat{A}_{i,o},
+\label{eq:local-score}
+\end{equation}
+and the lowest-scoring feasible option is reserved before the next task is processed. Tasks are considered by arrival time, then deadline, then descending work, which preserves the time structure of the trace while giving earlier deadlines precedence within an arrival batch.
+
+\begin{table}[t]
+\centering
+\caption{Base profile weights and principal control choices. The finish weight is increased by Eq.~\eqref{eq:profile-weights} for critical tasks.}
+\label{tab:profiles}
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabularx}{\linewidth}{lccccY}
+\toprule
+Profile & $b_E$ & $b_C$ & $b_T$ & $b_A$ & Main DVFS choices \\
+\midrule
+Balanced & 0.34 & 0.34 & 0.27 & 0.05 & eco, balanced, turbo \\
+Carbon-guarded & 0.18 & 0.57 & 0.20 & 0.05 & eco, balanced, performance \\
+Energy-guarded & 0.58 & 0.17 & 0.20 & 0.05 & eco-low, eco, balanced \\
+Latency-guarded & 0.12 & 0.08 & 0.75 & 0.05 & performance, turbo \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The allowed temporal-shift actions also depend on service class. Urgent tasks are never deliberately delayed. Standard tasks can use performance/balanced execution, while flexible tasks expose larger shift fractions in carbon- and balanced-oriented profiles. This keeps temporal carbon shifting tied to explicit slack instead of applying the same deferral rule to every task.
+
+\subsection{Workload-adaptive active pools}
+
+A fixed active-pool size behaves poorly across both sparse and contention-heavy workloads. \method estimates the required pool size from the maximum demand observed in a sliding 30-minute arrival window. Let $T_i^{\mathrm{turbo}}$ be the fastest feasible turbo runtime of task $i$, and let $\mathcal{W}(t)$ be the tasks arriving in $[t,t+1800)$. The pressure estimate is
+\begin{equation}
+D=\max_t\frac{\sum_{i\in\mathcal{W}(t)}T_i^{\mathrm{turbo}}}{1800}.
+\end{equation}
+The representative-regime pool size is
+\begin{equation}
+K=\mathrm{clip}\left(\left\lceil\frac{D}{0.75}\right\rceil,1,8\right),
+\label{eq:pool-size}
+\end{equation}
+with at least two nodes for the latency profile. Energy-, carbon-, hybrid-, and speed-ranked pools use this value to generate four adaptive constructors. The search additionally evaluates balanced pools of sizes $1,2,3,4,6$ across the four ranking criteria and latency pools of sizes $1$--$4$ across energy, carbon, and hybrid rankings. These deterministic candidates are useful because they directly expose consolidation versus headroom choices before stochastic search begins.
+
+\subsection{Equal-budget refinement and Pareto archive}
+
+Let $B$ denote the externally assigned objective-call budget. The search begins with the dynamic-greedy anchor, uniform and efficiency-oriented pool vectors, four profile constructors, and criticality repairs. It then alternates between two low-cost perturbation modes until the allocated budget is consumed. Global diversification adds Gaussian noise to the anchor. Grouped mutation selects a contiguous task group and perturbs only node, DVFS, and temporal keys consistent with the active profile; leaders are refreshed periodically from the current archive. The grouped operator preserves useful constructor structure and avoids repeatedly randomizing all $3N$ coordinates.
+
+Every evaluated vector is stored once using a rounded vector key. Feasible records are compared by the physical objective tuple in Eq.~\eqref{eq:objective-vector}; a record is non-dominated if no other feasible record is no worse in all six metrics and strictly better in at least one. The same archive is used for the four profile outputs, which avoids separate optimizer runs for carbon, energy, and latency.
+
+Profile selection uses ratios to the dynamic-greedy reference. For the balanced profile, for example,
+\begin{align}
+U_{\mathrm{bal}} ={}& \max(R_C,R_E,R_T)+0.25(R_C+R_E)+0.25R_T \\
+&+45\,[R_T-1.01]_+ + G + 5\times10^{-5}V_{\mathrm{mig}},
+\label{eq:balanced-utility}
+\end{align}
+where $R_C=C_{\mathrm{ctrl}}/C_{\mathrm{ctrl}}^{\mathrm{ref}}$, $R_E=E_{\mathrm{ctrl}}/E_{\mathrm{ctrl}}^{\mathrm{ref}}$, $R_T=T_{\max}/T_{\max}^{\mathrm{ref}}$, and
+\begin{equation}
+G=30[R_{E,g}-1.01]_+ +30[R_{C,g}-1.01]_+
+\end{equation}
+penalizes gross-energy and gross-carbon regressions. Carbon-, energy-, and latency-guarded profiles use analogous utilities with profile-specific caps. These utilities guide selection; the Pareto indicators reported later are computed from the unscalarized physical metrics.
+
+\subsection{Protected critical-tail repair}
+\label{sec:tail-repair}
+
+The final stage targets a failure mode that is easy to miss in energy-oriented schedules: a small number of late tasks can determine makespan even when the rest of the schedule is efficient. Two deterministic activation anchors are first constructed from the cloud node and the edge pool in region 3. The better feasible legacy anchor is retained as a reference. The balanced pre-repair schedule and the legacy anchor are each evaluated with a returned schedule and sorted by decreasing finish time.
+
+For tail sizes $h\in\{1,2,4,8\}$, two repair vectors are generated from each base schedule. The first sets the $h$ latest-finishing tasks to turbo DVFS with no temporal shift. The second additionally moves each selected task to its fastest feasible turbo node. This produces 16 explicit tail candidates. Together with two legacy templates and two schedule-producing tail analyses, the stage reserves exactly 20 objective calls. Consequently, the earlier search receives $B-20$ calls and the complete method still consumes exactly $B$ calls.
+
+The balanced output is chosen from feasible records satisfying all of the following fixed guards:
+\begin{align}
+C_{\mathrm{ctrl}} &\le C_{\mathrm{ctrl}}^{\mathrm{DG}}, \\
+E_{\mathrm{ctrl}} &\le 1.10 E_{\mathrm{ctrl}}^{\mathrm{base}}, \\
+C_{\mathrm{gross}} &\le C_{\mathrm{gross}}^{\mathrm{DG}}, \\
+E_{\mathrm{gross}} &\le 1.05 E_{\mathrm{gross}}^{\mathrm{base}}, \\
+T_{\max} &\le 1.01 T_{\max}^{\mathrm{DG}}, \\
+(E_{\mathrm{gross}},C_{\mathrm{gross}},T_{\max})
+&\le 1.05(E_{\mathrm{gross}},C_{\mathrm{gross}},T_{\max})^{\mathrm{legacy}}.
+\label{eq:protected-guards}
+\end{align}
+Among candidates that pass Eq.~\eqref{eq:protected-guards}, selection is lexicographic in makespan, gross energy, gross carbon, and controllable energy. If no repair passes, the pre-repair balanced anchor is retained. The guard therefore cannot force a worse repair merely because a tail candidate is faster.
+
+\begin{algorithm}[t]
+\caption{Guarded multi-profile search in \method}
+\label{alg:hcsmo}
+\begin{algorithmic}[1]
+\Require Shared simulator $\mathcal{S}$, task set $\mathcal{T}$, evaluation budget $B$, search seed $s$
+\Ensure Balanced schedule, four profile schedules, non-dominated archive
+\State Evaluate the shared dynamic-greedy anchor and initialize archive $\mathcal{A}$
+\State Build energy, carbon, hybrid, speed, and workload-adaptive pool candidates
+\State Evaluate deterministic profile and joint constructors
+\State Allocate $B-20$ calls to base search and grouped stochastic refinement
+\While{base budget remains}
+    \State Cycle through the four profiles
+    \State Generate anchor diversification or profile-consistent grouped mutation
+    \State Evaluate with $\mathcal{S}$ and update $\mathcal{A}$ and profile leaders
+\EndWhile
+\State Evaluate region-3 cloud and edge legacy activation anchors
+\For{base $\in\{$balanced anchor, legacy anchor$\}$}
+    \State Sort tasks by decreasing finish time
+    \For{$h\in\{1,2,4,8\}$}
+        \State Evaluate turbo/no-shift repair on the $h$ latest tasks
+        \State Evaluate fastest-feasible-node + turbo/no-shift repair
+    \EndFor
+\EndFor
+\State Form the non-dominated set from feasible records
+\State Apply Eq.~\eqref{eq:protected-guards} to balanced candidates
+\State Return the fastest protected candidate and the four profile outputs
+\end{algorithmic}
+\end{algorithm}

@@ -1,0 +1,162 @@
+\section{Results}
+\label{sec:results}
+
+The results are reported separately for the representative and SLA-constrained tracks. Within each scenario, lower carbon, energy, and makespan are better; method ranks are computed scenario by scenario before averaging. This avoids allowing a single high-magnitude scenario to dominate the comparison.
+
+\subsection{Overall ranking on representative workloads}
+
+Figure~\ref{fig:overall-ranks}a shows the average rank across the five primary metrics on the 12 representative scenarios. \method obtains an overall average rank of \good{1.98}, followed by ECC-CEE-adapted (3.38), NSGA-II (3.65), Jellyfish-RTS-adapted (3.84), MEO-adapted (3.85), TM-MOAOA-Joint (5.31), PPO-Joint (6.40), and ECO-PSO-Joint (7.58). The result is not driven by a single objective: \method has the best average rank for controllable carbon (1.67), controllable energy (1.92), gross carbon (1.67), gross energy (1.92), and makespan (2.75). It places first in 10/12 representative cells for both controllable and gross carbon, 8/12 for both energy measures, and 5/12 for makespan.
+
+\begin{figure*}[t]
+\centering
+\begin{subfigure}[t]{0.49\textwidth}
+\includegraphics[width=\linewidth]{fig01_overall_average_rank_representative.pdf}
+\caption{Representative track.}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.49\textwidth}
+\includegraphics[width=\linewidth]{fig01_overall_average_rank_sla_stress.pdf}
+\caption{SLA-constrained stress track.}
+\end{subfigure}
+\caption{Average rank across the five primary metrics. Lower rank is better. \method leads the representative track and ranks second under SLA stress.}
+\label{fig:overall-ranks}
+\end{figure*}
+
+Table~\ref{tab:overall-ranks} makes the distinction between the two tracks explicit. On representative workloads, \method is the strongest method by the aggregate rank used here. Under SLA stress, NSGA-II moves to first overall, while \method remains second and retains the best average makespan rank.
+
+\begin{table*}[t]
+\centering
+\caption{Overall average rank across the five primary metrics (lower is better). Bold indicates the best rank in each track.}
+\label{tab:overall-ranks}
+\small
+\begin{tabular}{lcc}
+\toprule
+Method & Representative & SLA stress \\
+\midrule
+\method & \good{1.98} & 2.64 \\
+ECC-CEE-adapted & 3.38 & 3.62 \\
+ECO-PSO-Joint & 7.58 & 6.96 \\
+TM-MOAOA-Joint & 5.31 & 6.14 \\
+MEO-adapted & 3.85 & 3.63 \\
+Jellyfish-RTS-adapted & 3.84 & 3.76 \\
+NSGA-II & 3.65 & \good{2.30} \\
+PPO-Joint & 6.40 & 6.96 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+The representative heatmap in Fig.~\ref{fig:heatmaps}a explains where the rank advantage comes from. Relative to the strongest competing method in each cell, the median \method improvement is \good{21.99\%} for controllable carbon and 1.95\% for controllable energy. Once the fixed infrastructure floor is included, the corresponding median advantages narrow to 0.39\% for gross carbon and 0.23\% for gross energy, which is expected from Eqs.~\eqref{eq:controllable-energy}--\eqref{eq:carbon-layers}. Median makespan is essentially tied with the strongest per-cell competitor.
+
+The principal exceptions are confined to the four sparse 30-task cells. In the two Alibaba cells, a specialist competitor becomes the carbon leader; in the two Google cells, an energy-specialized schedule becomes the energy leader. Figure~\ref{fig:heatmaps}a reports the exact cell-level magnitudes rather than averaging them away. At 60 and 90 tasks, all eight representative cells remain within 1\% of the strongest comparator on every primary metric, while preserving the aggregate rank advantage of \method. This scale separation is examined further in Section~\ref{sec:discussion}.
+
+\begin{figure*}[t]
+\centering
+\begin{subfigure}[t]{0.49\textwidth}
+\includegraphics[width=\linewidth]{fig03_cell_improvement_heatmap_representative.pdf}
+\caption{Representative scenarios.}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.49\textwidth}
+\includegraphics[width=\linewidth]{fig03_cell_improvement_heatmap_sla_stress.pdf}
+\caption{SLA stress scenarios.}
+\end{subfigure}
+\caption{Per-cell improvement of \method relative to the strongest competitor for each metric. Positive values favor \method. The full matrix is shown to preserve workload-level variation.}
+\label{fig:heatmaps}
+\end{figure*}
+
+\subsection{SLA-constrained stress performance}
+
+The SLA track changes the relative order of the strongest methods. NSGA-II obtains the best overall rank (2.30), followed by \method (2.64). The proposed scheduler nevertheless remains highly competitive across the five metrics: its average ranks are 2.42 for controllable carbon, 3.00 for controllable energy, 2.42 for gross carbon, 3.00 for gross energy, and \good{2.38} for makespan. The last value is the best average makespan rank among all eight methods.
+
+Against the strongest competitor selected independently in each SLA cell, \method has a median controllable-carbon improvement of \good{12.95\%} and a median gross-carbon improvement of \good{11.24\%}. Energy is effectively at parity at the track median: controllable energy is 0.40\% higher and gross energy 0.38\% higher than the strongest per-cell value. Median makespan difference is zero. This pattern clarifies the role of the profile search under contention: \method preserves a strong carbon/makespan operating point, while NSGA-II more often finds the lowest-energy point in the same scenario.
+
+The workload-level view remains important. Six of the 12 SLA cells fall within 1\% of the strongest comparator on all five primary metrics. In the remaining cells, the competing leader is specialized on one or more individual axes; Fig.~\ref{fig:heatmaps}b retains the exact deviations. The next subsection shows that these single-profile exceptions do not translate into a weaker trade-off set: the \method archive retains the highest normalized three-objective hypervolume throughout the SLA track.
+
+\subsection{Pareto quality and hypervolume}
+\label{sec:pareto-results}
+
+The clearest cross-track result is obtained from the Pareto set rather than the single balanced profile. Figure~\ref{fig:hypervolume} shows the exact normalized three-objective hypervolume ranks using controllable carbon, controllable energy, and makespan. \method ranks \good{first in all 24 scenarios}: 12/12 representative cells and 12/12 SLA cells. This remains true in the SLA track even though NSGA-II has the better overall average single-profile rank.
+
+\begin{figure*}[t]
+\centering
+\begin{subfigure}[t]{0.49\textwidth}
+\includegraphics[width=\linewidth]{fig09_hypervolume_rank_representative.pdf}
+\caption{Representative track.}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.49\textwidth}
+\includegraphics[width=\linewidth]{fig09_hypervolume_rank_sla_stress.pdf}
+\caption{SLA stress track.}
+\end{subfigure}
+\caption{Rank of exact normalized three-objective hypervolume. \method attains rank 1 in every evaluated scenario.}
+\label{fig:hypervolume}
+\end{figure*}
+
+Pareto coverage supports the same interpretation with more nuance. On representative workloads, the fraction of competitor front points dominated by the \method front has mean 0.869 and median 1.0. Under SLA stress, mean coverage decreases to 0.535 and median coverage to 0.420 because the strong NSGA-II/ECC-CEE/MEO/Jellyfish fronts retain non-dominated specialist points. The hypervolume remains higher because \method covers a broader balanced region of the normalized carbon--energy--makespan space. Example projections are shown in Fig.~\ref{fig:pareto-projection}.
+
+\begin{figure*}[t]
+\centering
+\begin{subfigure}[t]{0.49\textwidth}
+\includegraphics[width=\linewidth]{fig14_pareto_projection_representative.pdf}
+\caption{Representative projection.}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.49\textwidth}
+\includegraphics[width=\linewidth]{fig14_pareto_projection_sla_stress.pdf}
+\caption{SLA-stress projection.}
+\end{subfigure}
+\caption{Two-dimensional projection of the three-objective Pareto sets. Marker size encodes the normalized makespan component used in the three-dimensional hypervolume.}
+\label{fig:pareto-projection}
+\end{figure*}
+
+\subsection{Statistical evidence}
+\label{sec:statistics-results}
+
+The Friedman test rejects equal performance among the eight methods for every primary metric in both tracks ($p\le1.12\times10^{-7}$ on representative scenarios and $p\le8.35\times10^{-10}$ on SLA scenarios). Pairwise Wilcoxon--Holm results are summarized in Fig.~\ref{fig:significance}. On representative workloads, \method has a Holm-significant positive advantage in controllable and gross energy over six of seven competitors. Carbon advantages are Holm-significant over ECO-PSO, TM-MOAOA, and PPO; makespan is significantly better than TM-MOAOA. Against ECC-CEE and several strong Pareto/metaheuristic methods, the direction is often favorable but the 12 paired scenarios do not support a corrected $p<0.05$ claim for every metric.
+
+Under SLA stress, the result is especially clean against three methods: ECO-PSO, TM-MOAOA, and PPO. \method is Holm-significantly better than each of them for all five primary metrics. The matched-pairs rank-biserial effects are 0.92--1.00 for these comparisons, indicating that the paired direction is consistent across most or all stress cells. Comparisons with NSGA-II, ECC-CEE, MEO, and Jellyfish-RTS are not uniformly significant, which is consistent with their stronger positions in the SLA ranking.
+
+\begin{figure*}[t]
+\centering
+\begin{subfigure}[t]{0.49\textwidth}
+\includegraphics[width=\linewidth]{fig12_holm_pvalues_representative.pdf}
+\caption{Representative Holm-adjusted $p$ values.}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.49\textwidth}
+\includegraphics[width=\linewidth]{fig12_holm_pvalues_sla_stress.pdf}
+\caption{SLA Holm-adjusted $p$ values.}
+\end{subfigure}
+\caption{Paired Wilcoxon tests after Holm correction. Scenario/workload cells, not search seeds, form the paired samples.}
+\label{fig:significance}
+\end{figure*}
+
+\subsection{Runtime and decision overhead}
+\label{sec:runtime-results}
+
+Equal objective-call budgets do not imply equal wall-clock cost because each optimizer performs different search bookkeeping. On representative scenarios, \method has a median decision time of \SI{9.08}{s}. The fastest classical competitors are around 5.65--\SI{6.14}{s}, giving a median \method multiplier of 1.48 and a maximum of 1.68. PPO-Joint is substantially heavier at a \SI{90.56}{s} median. Thus, \method is slower than the simplest classical searches but approximately ten times faster than the PPO baseline in this track.
+
+Under SLA stress, the median \method decision time rises to \SI{50.72}{s}. ECO-PSO and MEO have medians of 17.59 and \SI{18.30}{s}; NSGA-II takes \SI{24.56}{s}; PPO-Joint takes \SI{581.60}{s}. The median multiplier relative to the fastest classical method is 2.92, with a maximum of 3.17 in the most expensive Google stress cell. Figure~\ref{fig:runtime} shows the complete distributions summarized by method.
+
+\begin{figure*}[t]
+\centering
+\begin{subfigure}[t]{0.49\textwidth}
+\includegraphics[width=\linewidth]{fig10_runtime_representative.pdf}
+\caption{Representative.}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.49\textwidth}
+\includegraphics[width=\linewidth]{fig10_runtime_sla_stress.pdf}
+\caption{SLA stress.}
+\end{subfigure}
+\caption{Median wall-clock decision time. The objective-call budget is equal within each scenario; the plot exposes method-specific computational overhead.}
+\label{fig:runtime}
+\end{figure*}
+
+\subsection{Migration behavior}
+\label{sec:migration-results}
+
+Migration remains modest on the representative workloads. For \method, migration energy accounts for a median 0.255\% of gross horizon energy and never exceeds 1.137\%; migration emissions have a median share of 0.317\% and maximum of 0.799\%. The SLA track uses migration more aggressively: median energy and emissions shares are 2.20\% and 1.95\%, while the largest Alibaba stress cases reach 19.97\% and 32.35\%, respectively. These are the cells in which cross-region movement becomes an explicit part of the carbon/latency trade-off rather than a negligible side effect.
+
+The migration-disabled ablation provides the relevant counterfactual. Across the 12 representative ablation cells, the median full-method improvement over migration-disabled scheduling is 99.77\% for controllable carbon, 77.75\% for controllable energy, and 59.35\% for gross energy, while the median makespan difference is below 0.001\%. The high migration fractions observed in a subset of SLA cells are therefore not simply gratuitous movement: the same capability is responsible for large carbon/energy improvements when spatial flexibility matters. Appendix~\ref{app:ablation} reports the complete ablation plots.
+
+\subsection{Ablation and sensitivity}
+\label{sec:ablation-results}
+
+The representative-track ablation identifies migration as the largest measured contributor in the median. Other components are more conditional. Median changes from removing adaptive active-pool control or critical-tail repair are close to zero, and the median selected point is unchanged when carbon shifting or the legacy guard is disabled. This does not imply that those mechanisms are redundant: they are protection and regime-selection operators whose effect is triggered only when the archive contains a candidate that crosses the relevant boundary.
+
+The DVFS ablation exposes a different trade-off. Across the representative ablation cells, removing five-state DVFS has a median 5.97\% lower controllable energy and 2.02\% lower controllable carbon than the full method, but a 0.339\% higher makespan. In other words, the full controller uses the extra DVFS range to purchase a shorter critical tail at a small energy/carbon cost rather than treating DVFS as an unconditional energy-saving device. Sensitivity plots show the same mechanism: restricted balanced/eco policies can reduce energy, while the full five-state policy reaches the lower makespan operating point. Across all sensitivity settings, deadline-miss ratio remains zero.

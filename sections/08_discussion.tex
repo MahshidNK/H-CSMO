@@ -1,0 +1,34 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Why the Pareto result is stronger than universal single-metric claims}
+
+The full benchmark separates two questions that are often conflated in multi-objective scheduling: whether a method produces a strong \emph{operating point}, and whether it produces a strong \emph{set of alternatives}. On representative workloads, \method performs well under both views: it has the best overall single-profile rank and the best hypervolume. Under SLA stress, the two views separate. NSGA-II has the better average rank for the selected balanced schedules, largely because it more often reaches the minimum-energy point. \method nevertheless has the highest three-objective hypervolume in every stress cell and the best average makespan rank. This means that its archive covers a broader useful carbon--energy--latency region even when another method supplies the lowest value of one individual metric.
+
+This distinction matters operationally. A scheduler deployed under a carbon budget, an energy cap, or a latency objective may prefer different points from the same Pareto set. Reporting only the balanced profile would hide that flexibility; reporting only hypervolume would hide the workload-specific regressions of the selected profile. The two views together provide a more faithful description of what the method offers.
+
+\subsection{Sparse-regime behavior and active-pool control}
+
+The four representative cells that are most difficult for \method are all 30-task scenarios. At that scale, the infrastructure has substantial capacity relative to demand, and a specialist strategy can consolidate aggressively onto one or two highly efficient nodes. \method deliberately evaluates multiple profile pools and retains headroom for latency and carbon shifts. The additional active capacity can therefore be unnecessary in the sparsest cells, especially when the strongest competitor happens to select an energy-specialized constructor.
+
+The workload-pressure estimator in Eq.~\eqref{eq:pool-size} reduces this effect by allowing one-node pools, and the protected selector prevents large makespan regressions. The remaining gaps show that sparse-regime scheduling is not simply a smaller version of the contention problem: activation cost dominates sooner than queueing cost. For this reason, the representative results are reported separately by task scale and the heatmap remains part of the main evaluation.
+
+\subsection{Interpreting controllable and gross carbon/energy}
+
+The two-layer accounting changes how percentage improvements should be read. A 20\% change in scheduler-controllable energy can become a sub-percent change in gross fixed-horizon energy when the infrastructure floor dominates the horizon. This is not a contradiction. $E_{\mathrm{ctrl}}$ measures the part affected by placement, timing, DVFS, sleep/wake, and migration; $E_{\mathrm{gross}}$ answers the facility-level question after restoring the fixed background floor. The same relation holds for carbon.
+
+The representative track illustrates this directly: median controllable-carbon improvement versus the strongest per-cell competitor is 21.99\%, while median gross-carbon improvement is 0.39\%. Presenting only the controllable metric would overstate the facility-level impact; presenting only the gross metric would make meaningful scheduler differences look negligible. Both layers are therefore necessary for a carbon-aware scheduling study.
+
+\subsection{Migration as an active control rather than a free benefit}
+
+Migration is beneficial only when the destination advantage exceeds transfer overhead. The representative workloads stay in a regime where that overhead is small. Several Alibaba SLA cells are different: cross-region movement contributes a visibly larger fraction of energy and emissions. The migration-disabled ablation shows why the full method still chooses those moves. Removing migration collapses the scheduler's spatial flexibility and produces much larger carbon and energy values in the diagnostic case. The practical conclusion is not that migration is cheap, but that it is a controlled resource that should be charged explicitly and used where its benefit is measurable.
+
+\subsection{Deployment regime and decision time}
+
+The wall-clock results place \method between classical metaheuristics and the PPO baseline. Its structured constructors, archive handling, and tail analysis are more expensive than ECO-PSO or MEO, but the method remains roughly an order of magnitude faster than PPO in both tracks. On the representative workloads, median decision time is approximately nine seconds. The SLA track reaches about 51 seconds because each scenario has 150 tasks and a 396-call budget. Such times fit rolling/batch rescheduling more naturally than sub-second per-request dispatch. For tighter online loops, the same architecture can be used with a smaller call budget; the sensitivity experiment shows that reducing the budget to 60--80\% preserves the selected point in the tested scenario while lowering runtime.
+
+\subsection{Evaluation scope and transferability}
+
+The evidence is based on trace-derived simulation with an explicit external power/network/carbon model, not on measurements from a production edge--cloud deployment. The simulator exposes the same controls and repair semantics to every compared method, and all reported schedules were replayed from saved decision vectors, but real platforms can introduce effects not represented here, including interference, uncertain transfer throughput, inaccurate carbon forecasts, and hardware-specific DVFS transition costs. The three adapted baselines are therefore labeled as adapted implementations, and the SLA arrival permutations are described as controlled workload-seed replications rather than untouched trace samples.
+
+These boundaries do not alter the comparative results inside the declared model; they define the next validation step. A deployment study should preserve the same distinction between controllable and gross energy, measure migration traffic directly, and test whether the protected tail selector remains stable when service-time and carbon forecasts are noisy.
