@@ -1,0 +1,11 @@
+track,metric,n_scenarios,n_methods,friedman_statistic,friedman_p_value
+representative,scheduler_controllable_emissions_g,12,8,54.43478260869561,1.929240713625928e-09
+representative,scheduler_controllable_energy_wh,12,8,57.31568016614741,5.173277379517908e-10
+representative,gross_horizon_emissions_g,12,8,54.43478260869561,1.929240713625928e-09
+representative,gross_horizon_energy_wh,12,8,57.31568016614741,5.173277379517908e-10
+representative,makespan_s,12,8,45.45216400911161,1.1172253922690537e-07
+sla_stress,scheduler_controllable_emissions_g,12,8,58.72488584474886,2.7115058823689945e-10
+sla_stress,scheduler_controllable_energy_wh,12,8,56.269841269841244,8.348080124468219e-10
+sla_stress,gross_horizon_emissions_g,12,8,58.72488584474886,2.7115058823689945e-10
+sla_stress,gross_horizon_energy_wh,12,8,56.269841269841244,8.348080124468219e-10
+sla_stress,makespan_s,12,8,72.77272727272727,4.058795953949062e-13
